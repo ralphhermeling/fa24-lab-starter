@@ -1,4 +1,4 @@
-.globl pow inc_arr
+.globl pow inc_arr helper_fn
 
 .data
 fail_message: .asciiz "%s test failed\n"
@@ -49,6 +49,8 @@ next_test:
 #
 pow:
     # BEGIN PROLOGUE
+    addi sp, sp, -4
+    sw s0, 0(sp)
     # FIXME: Need to save the callee saved register(s)
     # END PROLOGUE
     li s0, 1
@@ -60,6 +62,8 @@ pow_loop:
 pow_end:
     mv a0, s0
     # BEGIN EPILOGUE
+    lw s0, 0(sp)
+    addi sp, sp, 4
     # FIXME: Need to restore the callee saved register(s)
     # END EPILOGUE
     jr ra
@@ -70,11 +74,17 @@ pow_end:
 #
 # This function calls the "helper_fn" function, which takes in an
 # address as argument and increments the 32-bit value stored there.
+# preserved registers: s0, s1
 inc_arr:
     # BEGIN PROLOGUE
     # FIXME: What other registers need to be saved?
     addi sp, sp, -4
     sw ra, 0(sp)
+    
+    addi sp, sp, -8
+    sw s0, 4(sp)
+    sw s1, 0(sp)
+    
     # END PROLOGUE
     mv s0, a0 # Copy start of array to saved register
     mv s1, a1 # Copy length of array to saved register
@@ -84,18 +94,25 @@ inc_arr_loop:
     slli t1, t0, 2 # Convert array index to byte offset
     add a0, s0, t1 # Add offset to start of array
     # Prepare to call helper_fn
-    #
+    addi sp, sp, -4
+    sw t0, 0(sp)
     # FIXME: Add code to preserve the value in t0 before we call helper_fn
     # Also ask yourself this: why don't we need to preserve t1?
     #
     jal ra helper_fn
     # FIXME: Restore t0
+    lw t0, 0(sp)
+    addi sp, sp, 4
     # Finished call for helper_fn
     addi t0, t0, 1 # Increment counter
     j inc_arr_loop
 inc_arr_end:
     # BEGIN EPILOGUE
     # FIXME: What other registers need to be restored?
+    lw s1, 0(sp)
+    lw s0, 4(sp)
+    addi sp, sp, 8
+    
     lw ra, 0(sp)
     addi sp, sp, 4
     # END EPILOGUE
@@ -109,14 +126,19 @@ inc_arr_end:
 # be reported by the Venus CC checker (try and figure out why).
 # You should fix the bug anyway by filling in the prologue and epilogue
 # as appropriate.
+# preserverd registers: s0
 helper_fn:
     # BEGIN PROLOGUE
+    addi sp, sp, -4
+    sw s0, 0(sp)
     # FIXME: YOUR CODE HERE
     # END PROLOGUE
     lw t1, 0(a0)
     addi s0, t1, 1
     sw s0, 0(a0)
     # BEGIN EPILOGUE
+    lw s0, 0(sp)
+    addi sp, sp, 4
     # FIXME: YOUR CODE HERE
     # END EPILOGUE
     jr ra
